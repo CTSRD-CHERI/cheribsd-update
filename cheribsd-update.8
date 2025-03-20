@@ -1,0 +1,96 @@
+.\"-
+.\" SPDX-License-Identifier: BSD-2-Clause
+.\"
+.\" Copyright (c) 2024-2025 Jessica Clarke
+.\"
+.Dd March 20, 2025
+.Dt CHERIBSD-UPDATE 8
+.Os
+.Sh NAME
+.Nm cheribsd-update
+.Nd fetch and install binary updates to CheriBSD
+.Sh SYNOPSIS
+.Nm
+.Op Fl D Ar destdir
+.Ar command
+.Op Ar options
+.Nm
+.Fl h
+.Sh DESCRIPTION
+The
+.Nm
+tool is used to fetch and install binary updates to the CheriBSD base system.
+.Pp
+Although the author has taken every effort to handle errors and corner cases,
+bugs may exist and users of this tool should back up their system to avoid
+possible data loss.
+.Sh OPTIONS
+The following options are supported:
+.Bl -tag -width "-D destdir"
+.It Fl D Ar destdir
+Update the system installed to
+.Ar destdir
+rather than the current system.
+.It Fl h
+Print usage and exit.
+.El
+.Sh COMMANDS
+.Bl -tag -width indent
+.It Eo
+.Cm update
+.Op Fl y
+.Op Fl a Ar arch
+.Ar current
+.Ar new
+.Ec
+Update from CheriBSD version
+.Ar current
+to
+.Ar new .
+These can be released CheriBSD versions, such as
+.Cm 24.05 ,
+a branch snapshot in the form
+.Ar branch Ns @ Ns Ar version ,
+such as
+.Cm main@2024-07-19 ,
+or a path or URL to an FTP distribution area.
+.Pp
+Pass
+.Fl y
+to run without prompting for confirmation.
+.Pp
+Pass
+.Fl a Ar arch
+to specify the architecture if it differs from the host.
+This can be of the form
+.Ar machine
+(if
+.Ar machine
+and
+.Ar machine_arch
+are the same),
+.Ar machine Ns / Ns Ar machine_arch
+or
+.Ar machine Ns . Ns Ar machine_arch .
+For example, use
+.Cm amd64
+for 64-bit Intel/AMD or
+.Cm arm64.aarch64c
+for Morello.
+.It Cm resume
+Resume an in-progress update, such as after rebooting when prompted to use an
+updated kernel.
+.It Eo
+.Cm abort
+.Op Fl f
+.Ec
+Abort an in-progress update.
+.Pp
+Pass
+.Fl f
+to abort even when it cannot be done cleanly.
+This option should be used with care as it will leave the system in an
+inconsistent state.
+.El
+.Sh AUTHORS
+.An Jessica Clarke

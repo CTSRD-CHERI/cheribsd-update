@@ -1,0 +1,8 @@
+.depend
+.depend.*
+
+cheribsd-update
+cheribsd-update.debug
+cheribsd-update.full
+cheribsd-update.o
+cheribsd-update.8.*
