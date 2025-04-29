@@ -1528,8 +1528,9 @@ copy_tree(const std::string &from, const std::string &to, F callback,
 	struct archive_entry *entry, *sparse;
 	struct archive *rarchive, *warchive;
 	std::string path, rpath;
-	bool ret, ro, done;
+	bool ret, ro, done, reg;
 	char block[4096];
+	struct stat sb;
 	const char *p;
 	int aret, fd;
 	ssize_t r, w;
@@ -1681,6 +1682,26 @@ copy_tree(const std::string &from, const std::string &to, F callback,
 				archive_entry_fflags(entry, &fflags_set,
 				    &fflags_clear);
 				fflags_set &= ~UF_ARCHIVE;
+				if (exists(path, false, &sb)) {
+					reg = S_ISREG(sb.st_mode);
+					/*
+					 * libarchive will only clear flag foo
+					 * if nofoo is explicitly listed in the
+					 * archive's flags representation, and
+					 * archive_read_disk_entry_from_file
+					 * will similarly regard any flags not
+					 * set as flags to not set, not flags
+					 * to clear, but we want to set the
+					 * flags to exactly what's in the
+					 * archive, so clear anything already
+					 * present that's not requested (again
+					 * ignoring UF_ARCHIVE).
+					 */
+					fflags_clear |= sb.st_flags &
+					    ~(fflags_set | UF_ARCHIVE);
+				} else
+					reg = false;
+
 				archive_entry_set_fflags(entry, fflags_set,
 				    fflags_clear);
 
@@ -1694,13 +1715,11 @@ copy_tree(const std::string &from, const std::string &to, F callback,
 				if (ro)
 					continue;
 
-				/* https://github.com/libarchive/libarchive/pull/2477 */
-				if (archive_entry_filetype(entry) == AE_IFDIR &&
-				    file_exists(path, false)) {
-					if (unlink(path.c_str()) != 0) {
+				if (archive_entry_filetype(entry) == AE_IFDIR) {
+					/* https://github.com/libarchive/libarchive/pull/2477 */
+					if (reg && unlink(path.c_str()) != 0)
 						warn("cannot unlink %s for new directory",
 						    path.c_str());
-					}
 				}
 				aret = archive_write_header(warchive, entry);
 			}
