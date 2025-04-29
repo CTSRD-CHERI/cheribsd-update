@@ -1527,8 +1527,8 @@ copy_tree(const std::string &from, const std::string &to, F callback,
 	unsigned long fflags_set, fflags_clear;
 	struct archive_entry *entry, *sparse;
 	struct archive *rarchive, *warchive;
+	bool ret, ro, done, reg, dir;
 	std::string path, rpath;
-	bool ret, ro, done, reg;
 	char block[4096];
 	struct stat sb;
 	const char *p;
@@ -1684,6 +1684,7 @@ copy_tree(const std::string &from, const std::string &to, F callback,
 				fflags_set &= ~UF_ARCHIVE;
 				if (exists(path, false, &sb)) {
 					reg = S_ISREG(sb.st_mode);
+					dir = S_ISDIR(sb.st_mode);
 					/*
 					 * libarchive will only clear flag foo
 					 * if nofoo is explicitly listed in the
@@ -1699,8 +1700,10 @@ copy_tree(const std::string &from, const std::string &to, F callback,
 					 */
 					fflags_clear |= sb.st_flags &
 					    ~(fflags_set | UF_ARCHIVE);
-				} else
+				} else {
 					reg = false;
+					dir = false;
+				}
 
 				archive_entry_set_fflags(entry, fflags_set,
 				    fflags_clear);
@@ -1719,6 +1722,21 @@ copy_tree(const std::string &from, const std::string &to, F callback,
 					/* https://github.com/libarchive/libarchive/pull/2477 */
 					if (reg && unlink(path.c_str()) != 0)
 						warn("cannot unlink %s for new directory",
+						    path.c_str());
+
+					/*
+					 * libarchive isn't diligent about
+					 * clearing SF_IMMUTABLE when updating
+					 * an existing directory, so clear it
+					 * here and let libarchive restore it
+					 * if still required.
+					 */
+					if (dir &&
+					    (sb.st_flags & SF_IMMUTABLE) != 0 &&
+					    chflags(path.c_str(), sb.st_flags &
+					    ~SF_IMMUTABLE) != 0)
+						warn("cannot chflags noschg %s "
+						    "for existing directory",
 						    path.c_str());
 				}
 				aret = archive_write_header(warchive, entry);
